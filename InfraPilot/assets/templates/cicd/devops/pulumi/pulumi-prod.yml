@@ -1,0 +1,15 @@
+# Production pipeline - manual trigger only
+# Required secret/pipeline variables: see _pulumi-deploy.yml
+trigger: none
+pr: none
+
+variables:
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/pulumi'
+
+stages:
+- template: _pulumi-deploy.yml
+  parameters:
+    stack: prod
+    # Requires approval via Azure DevOps Environment settings
+    environmentName: production
+    environmentDisplayName: Production

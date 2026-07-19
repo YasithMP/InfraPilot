@@ -1,0 +1,78 @@
+// Agent needs: node 20, pulumi CLI. Or use a container agent:
+// agent { docker { image 'pulumi/pulumi-nodejs:latest' } }
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'test', 'prod'], description: 'Target environment (= Pulumi stack)')
+    }
+
+    environment {
+        PULUMI_DIR          = 'infrastructure/pulumi'
+        PULUMI_ACCESS_TOKEN = credentials('pulumi-access-token') // Jenkins Secret text credential
+        // Uncomment the block for your cloud provider:
+        // AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+        // AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        // ARM_CLIENT_ID       = credentials('azure-sp-client-id')
+        // ARM_CLIENT_SECRET   = credentials('azure-sp-client-secret')
+        // ARM_SUBSCRIPTION_ID = credentials('azure-subscription-id')
+        // ARM_TENANT_ID       = credentials('azure-tenant-id')
+        // GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account-key')
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                dir(env.PULUMI_DIR) {
+                    sh '''
+                        npm ci
+                        npx tsc --noEmit
+                    '''
+                }
+            }
+        }
+
+        // No static-file scanner for Pulumi — tsc + preview are the gate
+        // (see references/enterprise.md; offer CrossGuard policy packs for policy-as-code).
+
+        stage('Preview') {
+            steps {
+                dir(env.PULUMI_DIR) {
+                    sh """
+                        pulumi stack select ${params.ENVIRONMENT}
+                        pulumi preview --diff | tee preview-${params.ENVIRONMENT}.txt
+                    """
+                }
+                archiveArtifacts artifacts: "${env.PULUMI_DIR}/preview-${params.ENVIRONMENT}.txt", fingerprint: true
+            }
+        }
+
+        stage('Approval') {
+            when { expression { params.ENVIRONMENT != 'dev' } }
+            steps {
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: "Run 'pulumi up' on stack '${params.ENVIRONMENT}'?", ok: 'Apply'
+                }
+            }
+        }
+
+        stage('Up') {
+            steps {
+                dir(env.PULUMI_DIR) {
+                    sh "pulumi up --yes --stack ${params.ENVIRONMENT}"
+                }
+            }
+        }
+    }
+}

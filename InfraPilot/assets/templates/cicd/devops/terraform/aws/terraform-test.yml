@@ -1,0 +1,24 @@
+# Required pipeline variables: see _terraform-deploy.yml
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/terraform/*
+      - azure-pipelines-test.yml
+
+# Manual trigger only for test
+pr: none
+
+variables:
+  tf_version: '1.9.0'
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/terraform/environments/test'
+
+stages:
+- template: _terraform-deploy.yml
+  parameters:
+    environment: test
+    environmentName: test
+    environmentDisplayName: Test
+    backendKey: test.terraform.tfstate

@@ -1,0 +1,14 @@
+{
+  "name": "genops-azure",
+  "version": "1.0.0",
+  "description": "GenOps Pulumi (TypeScript) component set for Azure, built on @pulumi/azure-native.",
+  "main": "index.ts",
+  "dependencies": {
+    "@pulumi/pulumi": "^3.0.0",
+    "@pulumi/azure-native": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}

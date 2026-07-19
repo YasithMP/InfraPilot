@@ -1,0 +1,23 @@
+name: "Terraform - Production Environment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_after_plan:
+        description: "Auto-apply after plan (requires approval)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: prod
+      working_directory: ./infrastructure/terraform/environments/prod
+      plan_artifact_name: tfplan-prod
+      aws_region: us-east-1
+      apply_requires_approval: true
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

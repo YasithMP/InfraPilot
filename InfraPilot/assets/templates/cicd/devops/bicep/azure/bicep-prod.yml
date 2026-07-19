@@ -1,0 +1,16 @@
+# Production pipeline - manual trigger only
+# Required pipeline variables: see _bicep-deploy.yml
+trigger: none
+pr: none
+
+variables:
+  location: 'eastus'
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/bicep'
+
+stages:
+- template: _bicep-deploy.yml
+  parameters:
+    # Requires approval via Azure DevOps Environment settings
+    environmentName: production
+    environmentDisplayName: Production
+    paramFile: main.prod.bicepparam

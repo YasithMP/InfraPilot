@@ -1,0 +1,79 @@
+// Agent needs: terraform 1.9.x, checkov. Or use a container agent:
+// agent { docker { image 'hashicorp/terraform:1.9' args '--entrypoint=""' } }
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'test', 'prod'], description: 'Target environment')
+    }
+
+    environment {
+        TF_DIR           = "infrastructure/terraform/environments/${params.ENVIRONMENT}"
+        TF_IN_AUTOMATION = 'true'
+        AWS_DEFAULT_REGION = 'us-east-1' // replace with your region
+        // Prefer an IAM role on the Jenkins agent (instance profile / IRSA) — then delete these two bindings.
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')     // Jenkins Secret text credential
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key') // Jenkins Secret text credential
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh """
+                        terraform init -input=false \\
+                          -backend-config="key=${params.ENVIRONMENT}.terraform.tfstate"
+                          # add to init: -backend-config="bucket=<state-bucket>"
+                          #              -backend-config="region=<state-region>"
+                          #              -backend-config="dynamodb_table=<lock-table>"
+                        terraform fmt -check -recursive
+                        terraform validate
+                    """
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh "checkov -d ${env.TF_DIR} --framework terraform --quiet --compact"
+            }
+        }
+
+        stage('Plan') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh 'terraform plan -out=tfplan -input=false'
+                }
+                archiveArtifacts artifacts: "${env.TF_DIR}/tfplan", fingerprint: true
+            }
+        }
+
+        stage('Approval') {
+            when { expression { params.ENVIRONMENT != 'dev' } }
+            steps {
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: "Apply Terraform plan to '${params.ENVIRONMENT}'?", ok: 'Apply'
+                }
+            }
+        }
+
+        stage('Apply') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh 'terraform apply -input=false tfplan'
+                }
+            }
+        }
+    }
+}

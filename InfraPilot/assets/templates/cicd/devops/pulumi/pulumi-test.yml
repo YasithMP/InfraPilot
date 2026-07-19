@@ -1,0 +1,22 @@
+# Required secret/pipeline variables: see _pulumi-deploy.yml
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/pulumi/*
+      - azure-pipelines-test.yml
+
+# Manual trigger only for test
+pr: none
+
+variables:
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/pulumi'
+
+stages:
+- template: _pulumi-deploy.yml
+  parameters:
+    stack: test
+    environmentName: test
+    environmentDisplayName: Test

@@ -1,0 +1,42 @@
+name: "Pulumi Validate & Preview"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infrastructure/pulumi/**"
+      - ".github/workflows/pulumi-validate.yml"
+
+jobs:
+  validate:
+    name: "Validate & Preview"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infrastructure/pulumi
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: infrastructure/pulumi/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Type Check
+        run: npx tsc --noEmit
+
+      - name: Pulumi Preview
+        uses: pulumi/actions@v5
+        with:
+          command: preview
+          stack-name: dev
+          work-dir: infrastructure/pulumi
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

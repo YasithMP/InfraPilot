@@ -1,0 +1,19 @@
+name: "Pulumi - Production Environment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_after_preview:
+        description: "Auto-apply after preview (requires approval)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  pulumi:
+    uses: ./.github/workflows/_pulumi-deploy.yml
+    with:
+      environment: prod
+      stack: prod
+    secrets:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

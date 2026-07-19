@@ -1,0 +1,75 @@
+# Bicep deploy stage template (subscription-scope deployment).
+# Included from bicep-<env>.yml via `stages: - template: _bicep-deploy.yml`.
+# Not a standalone pipeline - do not point Azure DevOps at this file directly.
+#
+# Pipeline variables to define in Azure DevOps (Pipeline > Edit > Variables)
+# or in a linked variable group:
+#   azureServiceConnection - name of the Azure Resource Manager service
+#                            connection used to authenticate to the subscription.
+# Caller-provided variables: location, workingDirectory
+
+parameters:
+- name: environmentName
+  type: string
+- name: environmentDisplayName
+  type: string
+- name: paramFile
+  type: string
+- name: serviceConnection
+  type: string
+  default: '$(azureServiceConnection)'
+
+stages:
+- stage: ValidateAndWhatIf
+  displayName: 'Validate & What-If'
+  jobs:
+  - job: BicepWhatIf
+    displayName: 'Bicep What-If'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: 'Bicep Build & What-If'
+      inputs:
+        azureSubscription: '${{ parameters.serviceConnection }}'
+        scriptType: bash
+        scriptLocation: inlineScript
+        workingDirectory: $(workingDirectory)
+        inlineScript: |
+          az bicep build --file main.bicep
+          az deployment sub what-if \
+            --location $(location) \
+            --template-file main.bicep \
+            --parameters ${{ parameters.paramFile }}
+
+- stage: Deploy
+  displayName: 'Deploy to ${{ parameters.environmentDisplayName }}'
+  dependsOn: ValidateAndWhatIf
+  condition: succeeded()
+  jobs:
+  - deployment: BicepDeploy
+    displayName: 'Bicep Deploy'
+    pool:
+      vmImage: 'ubuntu-latest'
+    # Approvals are configured on the Azure DevOps Environment (e.g. 'production')
+    environment: '${{ parameters.environmentName }}'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: 'Bicep Deployment Create'
+            inputs:
+              azureSubscription: '${{ parameters.serviceConnection }}'
+              scriptType: bash
+              scriptLocation: inlineScript
+              workingDirectory: $(workingDirectory)
+              inlineScript: |
+                az deployment sub create \
+                  --location $(location) \
+                  --template-file main.bicep \
+                  --parameters ${{ parameters.paramFile }}

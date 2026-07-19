@@ -1,0 +1,75 @@
+// Agent needs: terraform 1.9.x, checkov. Or use a container agent:
+// agent { docker { image 'hashicorp/terraform:1.9' args '--entrypoint=""' } }
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'test', 'prod'], description: 'Target environment')
+    }
+
+    environment {
+        TF_DIR           = "infrastructure/terraform/environments/${params.ENVIRONMENT}"
+        TF_IN_AUTOMATION = 'true'
+        // Service account key — create as a Jenkins Secret file credential.
+        GOOGLE_APPLICATION_CREDENTIALS = credentials('gcp-service-account-key')
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh """
+                        terraform init -input=false \\
+                          -backend-config="prefix=${params.ENVIRONMENT}"
+                          # add to init: -backend-config="bucket=<state-bucket>"
+                        terraform fmt -check -recursive
+                        terraform validate
+                    """
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh "checkov -d ${env.TF_DIR} --framework terraform --quiet --compact"
+            }
+        }
+
+        stage('Plan') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh 'terraform plan -out=tfplan -input=false'
+                }
+                archiveArtifacts artifacts: "${env.TF_DIR}/tfplan", fingerprint: true
+            }
+        }
+
+        stage('Approval') {
+            when { expression { params.ENVIRONMENT != 'dev' } }
+            steps {
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: "Apply Terraform plan to '${params.ENVIRONMENT}'?", ok: 'Apply'
+                }
+            }
+        }
+
+        stage('Apply') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh 'terraform apply -input=false tfplan'
+                }
+            }
+        }
+    }
+}

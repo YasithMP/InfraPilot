@@ -1,0 +1,23 @@
+name: "Terraform - Test Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+      - ".github/workflows/tf-test.yml"
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: test
+      working_directory: ./infrastructure/terraform/environments/test
+      plan_artifact_name: tfplan-test
+      aws_region: us-east-1
+      apply_requires_approval: true
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

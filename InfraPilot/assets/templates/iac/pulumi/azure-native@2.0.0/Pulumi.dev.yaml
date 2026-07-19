@@ -1,0 +1,5 @@
+# Example stack configuration for the "dev" stack.
+# Set the default Azure region for all azure-native resources.
+# Override per environment (e.g. `pulumi config set azure-native:location westeurope`).
+config:
+  azure-native:location: eastus2

@@ -1,0 +1,112 @@
+# Pulumi deploy stage template (TypeScript, Node.js 20).
+# Included from pulumi-<env>.yml via `stages: - template: _pulumi-deploy.yml`.
+# Not a standalone pipeline - do not point Azure DevOps at this file directly.
+#
+# PULUMI_ACCESS_TOKEN must be a secret variable, e.g. from a linked variable group.
+# Per-cloud credentials (AWS_* / ARM_* / GOOGLE_*) come from a variable group or
+# an Azure DevOps service connection and are not set here.
+# Caller-provided variables: workingDirectory
+
+parameters:
+- name: stack
+  type: string
+- name: environmentName
+  type: string
+- name: environmentDisplayName
+  type: string
+
+stages:
+- stage: ValidateAndPreview
+  displayName: 'Validate & Preview'
+  jobs:
+  - job: PulumiPreview
+    displayName: 'Pulumi Preview'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+
+    - task: NodeTool@0
+      displayName: 'Use Node.js 20'
+      inputs:
+        versionSpec: '20.x'
+
+    - bash: npm ci
+      displayName: 'Install dependencies'
+      workingDirectory: $(workingDirectory)
+
+    - bash: npx tsc --noEmit
+      displayName: 'Type check'
+      workingDirectory: $(workingDirectory)
+
+    - bash: |
+        curl -fsSL https://get.pulumi.com | sh
+        echo "##vso[task.prependpath]$HOME/.pulumi/bin"
+      displayName: 'Install Pulumi CLI'
+
+    - bash: pulumi login
+      displayName: 'Pulumi Login'
+      workingDirectory: $(workingDirectory)
+      env:
+        PULUMI_ACCESS_TOKEN: $(PULUMI_ACCESS_TOKEN)
+
+    - bash: pulumi stack select ${{ parameters.stack }} --create
+      displayName: 'Select Stack'
+      workingDirectory: $(workingDirectory)
+      env:
+        PULUMI_ACCESS_TOKEN: $(PULUMI_ACCESS_TOKEN)
+
+    - bash: pulumi preview --stack ${{ parameters.stack }}
+      displayName: 'Pulumi Preview'
+      workingDirectory: $(workingDirectory)
+      env:
+        PULUMI_ACCESS_TOKEN: $(PULUMI_ACCESS_TOKEN)
+
+- stage: Deploy
+  displayName: 'Deploy to ${{ parameters.environmentDisplayName }}'
+  dependsOn: ValidateAndPreview
+  condition: succeeded()
+  jobs:
+  - deployment: PulumiDeploy
+    displayName: 'Pulumi Up'
+    pool:
+      vmImage: 'ubuntu-latest'
+    # Approvals are configured on the Azure DevOps Environment (e.g. 'production')
+    environment: '${{ parameters.environmentName }}'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: NodeTool@0
+            displayName: 'Use Node.js 20'
+            inputs:
+              versionSpec: '20.x'
+
+          - bash: npm ci
+            displayName: 'Install dependencies'
+            workingDirectory: $(workingDirectory)
+
+          - bash: |
+              curl -fsSL https://get.pulumi.com | sh
+              echo "##vso[task.prependpath]$HOME/.pulumi/bin"
+            displayName: 'Install Pulumi CLI'
+
+          - bash: pulumi login
+            displayName: 'Pulumi Login'
+            workingDirectory: $(workingDirectory)
+            env:
+              PULUMI_ACCESS_TOKEN: $(PULUMI_ACCESS_TOKEN)
+
+          - bash: pulumi stack select ${{ parameters.stack }} --create
+            displayName: 'Select Stack'
+            workingDirectory: $(workingDirectory)
+            env:
+              PULUMI_ACCESS_TOKEN: $(PULUMI_ACCESS_TOKEN)
+
+          - bash: pulumi up --yes --stack ${{ parameters.stack }}
+            displayName: 'Pulumi Up'
+            workingDirectory: $(workingDirectory)
+            env:
+              PULUMI_ACCESS_TOKEN: $(PULUMI_ACCESS_TOKEN)

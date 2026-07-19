@@ -1,0 +1,27 @@
+name: "Terraform - Dev Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+      - ".github/workflows/tf-dev.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: dev
+      working_directory: ./infrastructure/terraform/environments/dev
+      plan_artifact_name: tfplan-dev
+      aws_region: us-east-1
+      apply_requires_approval: false
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

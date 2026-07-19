@@ -1,0 +1,7 @@
+config:
+  # The GCP project to deploy resources into. Override with your own project ID.
+  gcp:project: my-project
+  # The default GCP region for regional resources (subnetworks, Cloud Run, etc.).
+  gcp:region: us-central1
+  # The default GCP zone for zonal resources (compute instances). Optional.
+  # gcp:zone: us-central1-a

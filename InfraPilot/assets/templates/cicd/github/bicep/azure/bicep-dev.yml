@@ -1,0 +1,26 @@
+name: "Bicep - Dev Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/bicep/**"
+      - ".github/workflows/bicep-dev.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infrastructure/bicep/**"
+
+jobs:
+  bicep:
+    uses: ./.github/workflows/_bicep-deploy.yml
+    with:
+      environment: dev
+      location: eastus
+      parameters_file: main.dev.bicepparam
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

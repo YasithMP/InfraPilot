@@ -1,0 +1,19 @@
+# Production pipeline - manual trigger only
+# Required pipeline variables: see _terraform-deploy.yml
+trigger: none
+pr: none
+
+variables:
+  tf_version: '1.9.0'
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/terraform/environments/prod'
+
+stages:
+- template: _terraform-deploy.yml
+  parameters:
+    environment: prod
+    # Requires approval via Azure DevOps Environment settings
+    environmentName: production
+    environmentDisplayName: Production
+    backendKey: prod.terraform.tfstate
+    planExtraArgs: '-detailed-exitcode'
+    showPlan: true

@@ -1,0 +1,23 @@
+# Required pipeline variables: see _bicep-deploy.yml
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/bicep/*
+      - azure-pipelines-test.yml
+
+# Manual trigger only for test
+pr: none
+
+variables:
+  location: 'eastus'
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/bicep'
+
+stages:
+- template: _bicep-deploy.yml
+  parameters:
+    environmentName: test
+    environmentDisplayName: Test
+    paramFile: main.test.bicepparam

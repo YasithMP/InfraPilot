@@ -1,0 +1,3 @@
+name: genops-gcp
+runtime: nodejs
+description: Pulumi (TypeScript) component set for GCP, mirroring the genops Terraform google module coverage.

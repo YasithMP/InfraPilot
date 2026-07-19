@@ -1,0 +1,24 @@
+name: "Terraform - Production Environment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_after_plan:
+        description: "Auto-apply after plan (requires approval)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: prod
+      working_directory: ./infrastructure/terraform/environments/prod
+      plan_artifact_name: tfplan-prod
+      apply_requires_approval: true
+    secrets:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}

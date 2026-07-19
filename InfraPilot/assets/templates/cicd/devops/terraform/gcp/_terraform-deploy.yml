@@ -1,0 +1,141 @@
+# Terraform deploy stage template (GCS backend).
+# Included from terraform-<env>.yml via `stages: - template: _terraform-deploy.yml`.
+# Not a standalone pipeline - do not point Azure DevOps at this file directly.
+#
+# Required pipeline variables (define in Azure DevOps variable groups or pipeline settings):
+#   gcpServiceConnection - name of the Google Cloud service connection
+#   backendBucket        - GCS bucket name for the Terraform remote state
+#   gcpProject           - target GCP project ID
+#   gcpRegion            - target GCP region
+# Caller-provided variables: tf_version, workingDirectory
+
+parameters:
+- name: environment
+  type: string
+- name: environmentName
+  type: string
+- name: environmentDisplayName
+  type: string
+- name: backendPrefix
+  type: string
+- name: serviceConnection
+  type: string
+  default: '$(gcpServiceConnection)'
+- name: planExtraArgs
+  type: string
+  default: ''
+- name: showPlan
+  type: boolean
+  default: false
+
+stages:
+- stage: ValidateAndPlan
+  displayName: 'Validate & Plan'
+  jobs:
+  - job: TerraformPlan
+    displayName: 'Terraform Plan'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: $(tf_version)
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'gcp'
+        command: 'init'
+        workingDirectory: $(workingDirectory)
+        backendServiceGCP: '${{ parameters.serviceConnection }}'
+        backendType: 'gcs'
+        backendGCSBucket: '$(backendBucket)'
+        backendGCSPrefix: '${{ parameters.backendPrefix }}'
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Validate'
+      inputs:
+        provider: 'gcp'
+        command: 'validate'
+        workingDirectory: $(workingDirectory)
+
+    - script: |
+        pip install checkov --quiet
+        checkov -d $(workingDirectory) --framework terraform --quiet --compact
+      displayName: 'Security Scan (Checkov)'
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'gcp'
+        command: 'plan'
+        workingDirectory: $(workingDirectory)
+        environmentServiceNameGCP: '${{ parameters.serviceConnection }}'
+        commandOptions: '-out=$(Build.ArtifactStagingDirectory)/tfplan -var="project=$(gcpProject)" -var="region=$(gcpRegion)" ${{ parameters.planExtraArgs }}'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Plan'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/tfplan'
+        ArtifactName: 'tfplan-${{ parameters.environment }}'
+        publishLocation: 'Container'
+
+    - ${{ if eq(parameters.showPlan, true) }}:
+      - task: TerraformTaskV4@4
+        displayName: 'Show Plan'
+        inputs:
+          provider: 'gcp'
+          command: 'show'
+          workingDirectory: $(workingDirectory)
+          commandOptions: '$(Build.ArtifactStagingDirectory)/tfplan'
+
+- stage: Deploy
+  displayName: 'Deploy to ${{ parameters.environmentDisplayName }}'
+  dependsOn: ValidateAndPlan
+  condition: succeeded()
+  jobs:
+  - deployment: TerraformDeploy
+    displayName: 'Terraform Apply'
+    pool:
+      vmImage: 'ubuntu-latest'
+    # Approvals are configured on the Azure DevOps Environment (e.g. 'production')
+    environment: '${{ parameters.environmentName }}'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: $(tf_version)
+
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'gcp'
+              command: 'init'
+              workingDirectory: $(workingDirectory)
+              backendServiceGCP: '${{ parameters.serviceConnection }}'
+              backendType: 'gcs'
+              backendGCSBucket: '$(backendBucket)'
+              backendGCSPrefix: '${{ parameters.backendPrefix }}'
+
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download Plan'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'tfplan-${{ parameters.environment }}'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'gcp'
+              command: 'apply'
+              workingDirectory: $(workingDirectory)
+              environmentServiceNameGCP: '${{ parameters.serviceConnection }}'
+              commandOptions: '$(System.ArtifactsDirectory)/tfplan-${{ parameters.environment }}/tfplan'

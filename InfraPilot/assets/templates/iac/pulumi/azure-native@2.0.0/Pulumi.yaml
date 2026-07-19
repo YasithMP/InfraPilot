@@ -1,0 +1,3 @@
+name: genops-azure
+runtime: nodejs
+description: GenOps Pulumi (TypeScript) component set for Azure, mirroring the GenOps Azure Terraform module coverage.

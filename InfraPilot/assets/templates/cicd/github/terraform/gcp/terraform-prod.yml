@@ -1,0 +1,23 @@
+name: "Terraform - Production Environment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply_after_plan:
+        description: "Auto-apply after plan (requires approval)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: prod
+      working_directory: ./infrastructure/terraform/environments/prod
+      plan_artifact_name: tfplan-prod
+      gcp_project: ${{ vars.GCP_PROJECT }}
+      gcp_region: ${{ vars.GCP_REGION }}
+      apply_requires_approval: true
+    secrets:
+      GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}

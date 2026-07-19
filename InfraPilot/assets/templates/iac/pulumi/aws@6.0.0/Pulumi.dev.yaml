@@ -1,0 +1,4 @@
+# Example stack configuration for the "dev" stack.
+# Set the AWS region the provider deploys into. Override per stack as needed.
+config:
+  aws:region: us-east-1

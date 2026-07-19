@@ -1,0 +1,143 @@
+# Terraform deploy stage template (Azure backend).
+# Included from terraform-<env>.yml via `stages: - template: _terraform-deploy.yml`.
+# Not a standalone pipeline - do not point Azure DevOps at this file directly.
+#
+# Pipeline variables to define (pipeline UI or variable group):
+#   azureServiceConnection - name of the Azure Resource Manager service connection
+#   backendResourceGroup   - resource group containing the state storage account
+#   backendStorageAccount  - storage account holding the Terraform state
+#   backendContainer       - blob container for the Terraform state
+# Caller-provided variables: tf_version, workingDirectory
+
+parameters:
+- name: environment
+  type: string
+- name: environmentName
+  type: string
+- name: environmentDisplayName
+  type: string
+- name: backendKey
+  type: string
+- name: serviceConnection
+  type: string
+  default: '$(azureServiceConnection)'
+- name: planExtraArgs
+  type: string
+  default: ''
+- name: showPlan
+  type: boolean
+  default: false
+
+stages:
+- stage: ValidateAndPlan
+  displayName: 'Validate & Plan'
+  jobs:
+  - job: TerraformPlan
+    displayName: 'Terraform Plan'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: $(tf_version)
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: $(workingDirectory)
+        backendServiceArm: '${{ parameters.serviceConnection }}'
+        backendAzureRmResourceGroupName: '$(backendResourceGroup)'
+        backendAzureRmStorageAccountName: '$(backendStorageAccount)'
+        backendAzureRmContainerName: '$(backendContainer)'
+        backendAzureRmKey: '${{ parameters.backendKey }}'
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Validate'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: $(workingDirectory)
+
+    - script: |
+        pip install checkov --quiet
+        checkov -d $(workingDirectory) --framework terraform --quiet --compact
+      displayName: 'Security Scan (Checkov)'
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: $(workingDirectory)
+        environmentServiceNameAzureRM: '${{ parameters.serviceConnection }}'
+        commandOptions: '-out=$(Build.ArtifactStagingDirectory)/tfplan ${{ parameters.planExtraArgs }}'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Plan'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/tfplan'
+        ArtifactName: 'tfplan-${{ parameters.environment }}'
+        publishLocation: 'Container'
+
+    - ${{ if eq(parameters.showPlan, true) }}:
+      - task: TerraformTaskV4@4
+        displayName: 'Show Plan'
+        inputs:
+          provider: 'azurerm'
+          command: 'show'
+          workingDirectory: $(workingDirectory)
+          commandOptions: '$(Build.ArtifactStagingDirectory)/tfplan'
+
+- stage: Deploy
+  displayName: 'Deploy to ${{ parameters.environmentDisplayName }}'
+  dependsOn: ValidateAndPlan
+  condition: succeeded()
+  jobs:
+  - deployment: TerraformDeploy
+    displayName: 'Terraform Apply'
+    pool:
+      vmImage: 'ubuntu-latest'
+    # Approvals are configured on the Azure DevOps Environment (e.g. 'production')
+    environment: '${{ parameters.environmentName }}'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: $(tf_version)
+
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: $(workingDirectory)
+              backendServiceArm: '${{ parameters.serviceConnection }}'
+              backendAzureRmResourceGroupName: '$(backendResourceGroup)'
+              backendAzureRmStorageAccountName: '$(backendStorageAccount)'
+              backendAzureRmContainerName: '$(backendContainer)'
+              backendAzureRmKey: '${{ parameters.backendKey }}'
+
+          - task: DownloadBuildArtifacts@1
+            displayName: 'Download Plan'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'tfplan-${{ parameters.environment }}'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              workingDirectory: $(workingDirectory)
+              environmentServiceNameAzureRM: '${{ parameters.serviceConnection }}'
+              commandOptions: '$(System.ArtifactsDirectory)/tfplan-${{ parameters.environment }}/tfplan'

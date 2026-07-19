@@ -1,0 +1,17 @@
+{
+  "name": "genops-gcp",
+  "version": "1.0.0",
+  "description": "Pulumi (TypeScript) component set for GCP, mirroring the genops Terraform google module coverage.",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@pulumi/pulumi": "^3.0.0",
+    "@pulumi/gcp": "^8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

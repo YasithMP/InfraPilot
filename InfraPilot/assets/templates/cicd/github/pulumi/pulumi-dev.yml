@@ -1,0 +1,23 @@
+name: "Pulumi - Dev Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/pulumi/**"
+      - ".github/workflows/pulumi-dev.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infrastructure/pulumi/**"
+
+jobs:
+  pulumi:
+    uses: ./.github/workflows/_pulumi-deploy.yml
+    with:
+      environment: dev
+      stack: dev
+    secrets:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

@@ -1,0 +1,80 @@
+// Agent needs: terraform 1.9.x, checkov. Or use a container agent:
+// agent { docker { image 'hashicorp/terraform:1.9' args '--entrypoint=""' } }
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'test', 'prod'], description: 'Target environment')
+    }
+
+    environment {
+        TF_DIR           = "infrastructure/terraform/environments/${params.ENVIRONMENT}"
+        TF_IN_AUTOMATION = 'true'
+        // Service principal — create these as Jenkins Secret text credentials.
+        ARM_CLIENT_ID       = credentials('azure-sp-client-id')
+        ARM_CLIENT_SECRET   = credentials('azure-sp-client-secret')
+        ARM_SUBSCRIPTION_ID = credentials('azure-subscription-id')
+        ARM_TENANT_ID       = credentials('azure-tenant-id')
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh """
+                        terraform init -input=false \\
+                          -backend-config="key=${params.ENVIRONMENT}.terraform.tfstate"
+                          # add to init: -backend-config="resource_group_name=<state-rg>"
+                          #              -backend-config="storage_account_name=<state-storage-account>"
+                          #              -backend-config="container_name=<state-container>"
+                        terraform fmt -check -recursive
+                        terraform validate
+                    """
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh "checkov -d ${env.TF_DIR} --framework terraform --quiet --compact"
+            }
+        }
+
+        stage('Plan') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh 'terraform plan -out=tfplan -input=false'
+                }
+                archiveArtifacts artifacts: "${env.TF_DIR}/tfplan", fingerprint: true
+            }
+        }
+
+        stage('Approval') {
+            when { expression { params.ENVIRONMENT != 'dev' } }
+            steps {
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: "Apply Terraform plan to '${params.ENVIRONMENT}'?", ok: 'Apply'
+                }
+            }
+        }
+
+        stage('Apply') {
+            steps {
+                dir(env.TF_DIR) {
+                    sh 'terraform apply -input=false tfplan'
+                }
+            }
+        }
+    }
+}

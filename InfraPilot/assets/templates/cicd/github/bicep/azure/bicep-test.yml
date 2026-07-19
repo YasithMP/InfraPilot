@@ -1,0 +1,22 @@
+name: "Bicep - Test Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/bicep/**"
+      - ".github/workflows/bicep-test.yml"
+  workflow_dispatch:
+
+jobs:
+  bicep:
+    uses: ./.github/workflows/_bicep-deploy.yml
+    with:
+      environment: test
+      location: eastus
+      parameters_file: main.test.bicepparam
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}

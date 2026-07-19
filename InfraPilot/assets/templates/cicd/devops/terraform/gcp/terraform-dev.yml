@@ -1,0 +1,29 @@
+# Required pipeline variables: see _terraform-deploy.yml
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/terraform/*
+      - azure-pipelines-dev.yml
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/terraform/*
+
+variables:
+  tf_version: '1.9.0'
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/terraform/environments/dev'
+
+stages:
+- template: _terraform-deploy.yml
+  parameters:
+    environment: dev
+    environmentName: dev
+    environmentDisplayName: Dev
+    backendPrefix: dev

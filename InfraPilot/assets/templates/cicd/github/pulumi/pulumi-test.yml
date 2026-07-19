@@ -1,0 +1,19 @@
+name: "Pulumi - Test Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/pulumi/**"
+      - ".github/workflows/pulumi-test.yml"
+  workflow_dispatch:
+
+jobs:
+  pulumi:
+    uses: ./.github/workflows/_pulumi-deploy.yml
+    with:
+      environment: test
+      stack: test
+    secrets:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}

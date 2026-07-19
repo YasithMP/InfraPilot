@@ -1,0 +1,90 @@
+// Agent needs: az CLI (with bicep), checkov. Or use a container agent:
+// agent { docker { image 'mcr.microsoft.com/azure-cli:latest' } }
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'test', 'prod'], description: 'Target environment')
+    }
+
+    environment {
+        BICEP_DIR = 'infrastructure/bicep'
+        LOCATION  = 'eastus' // replace with your Azure region
+        // Service principal — create these as Jenkins Secret text credentials.
+        AZURE_CLIENT_ID       = credentials('azure-sp-client-id')
+        AZURE_CLIENT_SECRET   = credentials('azure-sp-client-secret')
+        AZURE_SUBSCRIPTION_ID = credentials('azure-subscription-id')
+        AZURE_TENANT_ID       = credentials('azure-tenant-id')
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                dir(env.BICEP_DIR) {
+                    sh '''
+                        az login --service-principal \\
+                          --username "$AZURE_CLIENT_ID" \\
+                          --password "$AZURE_CLIENT_SECRET" \\
+                          --tenant "$AZURE_TENANT_ID"
+                        az account set --subscription "$AZURE_SUBSCRIPTION_ID"
+                        az bicep build --file main.bicep
+                    '''
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                sh "checkov -d ${env.BICEP_DIR} --framework bicep --quiet --compact"
+            }
+        }
+
+        stage('What-If') {
+            steps {
+                dir(env.BICEP_DIR) {
+                    sh """
+                        az deployment sub what-if \\
+                          --location ${env.LOCATION} \\
+                          --template-file main.bicep \\
+                          --parameters main.${params.ENVIRONMENT}.bicepparam \\
+                          | tee whatif-${params.ENVIRONMENT}.txt
+                    """
+                }
+                archiveArtifacts artifacts: "${env.BICEP_DIR}/whatif-${params.ENVIRONMENT}.txt", fingerprint: true
+            }
+        }
+
+        stage('Approval') {
+            when { expression { params.ENVIRONMENT != 'dev' } }
+            steps {
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: "Deploy Bicep template to '${params.ENVIRONMENT}'?", ok: 'Apply'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                dir(env.BICEP_DIR) {
+                    sh """
+                        az deployment sub create \\
+                          --location ${env.LOCATION} \\
+                          --template-file main.bicep \\
+                          --parameters main.${params.ENVIRONMENT}.bicepparam
+                    """
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,28 @@
+# Required pipeline variables: see _bicep-deploy.yml
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/bicep/*
+      - azure-pipelines-dev.yml
+
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - infrastructure/bicep/*
+
+variables:
+  location: 'eastus'
+  workingDirectory: '$(Build.SourcesDirectory)/infrastructure/bicep'
+
+stages:
+- template: _bicep-deploy.yml
+  parameters:
+    environmentName: dev
+    environmentDisplayName: Dev
+    paramFile: main.dev.bicepparam

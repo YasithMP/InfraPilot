@@ -1,0 +1,24 @@
+name: "Terraform - Test Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+      - ".github/workflows/tf-test.yml"
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: test
+      working_directory: ./infrastructure/terraform/environments/test
+      plan_artifact_name: tfplan-test
+      apply_requires_approval: true
+    secrets:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}

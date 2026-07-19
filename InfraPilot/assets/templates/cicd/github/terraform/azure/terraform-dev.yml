@@ -1,0 +1,28 @@
+name: "Terraform - Dev Environment"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+      - ".github/workflows/tf-dev.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+
+jobs:
+  terraform:
+    uses: ./.github/workflows/_terraform-deploy.yml
+    with:
+      environment: dev
+      working_directory: ./infrastructure/terraform/environments/dev
+      plan_artifact_name: tfplan-dev
+      apply_requires_approval: false
+    secrets:
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}

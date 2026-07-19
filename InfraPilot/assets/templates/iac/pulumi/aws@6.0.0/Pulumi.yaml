@@ -1,0 +1,3 @@
+name: genops-aws
+runtime: nodejs
+description: GenOps Pulumi (TypeScript) component set for AWS, mirroring the GenOps AWS Terraform module coverage (vpc, security group, s3 bucket, kms key, iam role, ec2 instance, app runner).

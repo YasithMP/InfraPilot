@@ -1,0 +1,135 @@
+name: "Terraform Deploy (callable)"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "Target environment (dev, test, prod)"
+      working_directory:
+        required: true
+        type: string
+        description: "Terraform root for this environment (e.g. ./infrastructure/terraform/environments/dev)"
+      plan_artifact_name:
+        required: true
+        type: string
+        description: "Artifact name for the plan file"
+      aws_region:
+        required: false
+        type: string
+        default: "us-east-1"
+        description: "AWS region for the provider and backend"
+      apply_requires_approval:
+        required: false
+        type: boolean
+        default: false
+        description: "Whether apply requires manual approval via GitHub Environment"
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ inputs.aws_region }}
+
+jobs:
+  validate-and-plan:
+    name: "Validate & Plan"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -out=tfplan -input=false
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.plan_artifact_name }}
+          path: ${{ inputs.working_directory }}/tfplan
+          retention-days: 5
+
+      - name: Show Plan
+        id: show-plan
+        run: |
+          PLAN=$(terraform show -no-color tfplan)
+          {
+            echo "plan<<EOF"
+            echo "$PLAN"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const plan = `${{ steps.show-plan.outputs.plan }}`;
+            const maxLength = 65000;
+            const truncated = plan.length > maxLength ? plan.substring(0, maxLength) + '\n\n... (truncated)' : plan;
+            const body = `## Terraform Plan for \`${{ inputs.environment }}\`
+            \n<details><summary>Show Plan</summary>\n\n\`\`\`terraform\n${truncated}\n\`\`\`\n\n</details>\n`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  deploy:
+    name: "Deploy to ${{ inputs.environment }}"
+    needs: validate-and-plan
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.deploy.outputs.url }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Download Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.plan_artifact_name }}
+          path: ${{ inputs.working_directory }}
+
+      - name: Terraform Apply
+        id: deploy
+        if: |
+          github.event_name != 'pull_request' ||
+          (github.event_name == 'pull_request' && inputs.environment == 'dev')
+        run: terraform apply -input=false tfplan

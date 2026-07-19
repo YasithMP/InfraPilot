@@ -1,0 +1,61 @@
+name: "Terraform Validate & Lint"
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infrastructure/terraform/**"
+      - ".github/workflows/tf-validate.yml"
+
+jobs:
+  validate:
+    name: "Validate & Lint"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infrastructure/terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Validate Environments
+        run: |
+          for dir in environments/*/; do
+            echo "Validating environment: $dir"
+            terraform -chdir="$dir" init -backend=false -input=false >/dev/null || exit 1
+            terraform -chdir="$dir" validate || exit 1
+          done
+
+      - name: Validate Modules
+        run: |
+          for dir in modules/*/; do
+            if [ -f "$dir/main.tf" ]; then
+              echo "Validating module: $dir"
+              terraform -chdir="$dir" validate || exit 1
+            fi
+          done
+
+      - name: Security Scan (Checkov)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infrastructure/terraform
+          framework: terraform
+          quiet: true
+          soft_fail: false
+
+      - name: Check for TODOs
+        run: |
+          echo "Checking for TODO comments in Terraform files..."
+          if grep -rni "TODO" environments/ modules/; then
+            echo "::warning::Found TODO comments in Terraform files. Remove before merging."
+          fi
+        continue-on-error: true
