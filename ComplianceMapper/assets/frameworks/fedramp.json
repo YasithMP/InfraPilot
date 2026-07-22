@@ -1,0 +1,68 @@
+{
+  "framework": "fedramp",
+  "name": "FedRAMP (NIST SP 800-53 rev5 baselines)",
+  "version": "FedRAMP Moderate baseline, control-family level",
+  "notes": "Infrastructure-relevant NIST 800-53 control families as applied by FedRAMP Moderate. Family-level summary with representative controls, not the full baseline (~320 controls). Deployment in a FedRAMP-authorized region/partition (e.g. AWS GovCloud, Azure Government) is a prerequisite question to raise. Not a 3PAO assessment.",
+  "requirements": [
+    {
+      "id": "AC",
+      "name": "Access Control (AC-2, AC-3, AC-6, AC-17)",
+      "description": "Account management, access enforcement, least privilege, and remote access control.",
+      "infra_signals": ["least-privilege IAM with role separation", "session manager / bastion instead of open SSH", "account lifecycle automated via IaC", "remote admin only over VPN or private endpoints"]
+    },
+    {
+      "id": "AU",
+      "name": "Audit and Accountability (AU-2, AU-6, AU-9, AU-11)",
+      "description": "Audit event logging, review, protection of audit information, and retention.",
+      "infra_signals": ["org-wide audit trail enabled", "logs shipped to a separate restricted account/project", "immutable log storage", "retention meeting agency requirements (typically >= 90 days online, 1 year archive)"]
+    },
+    {
+      "id": "CM",
+      "name": "Configuration Management (CM-2, CM-3, CM-6, CM-8)",
+      "description": "Baseline configurations, change control, configuration settings, and component inventory.",
+      "infra_signals": ["IaC as authoritative baseline in version control", "Config/Policy rules enforcing settings", "resource inventory via tagging", "change control through reviewed pipelines"]
+    },
+    {
+      "id": "CP",
+      "name": "Contingency Planning (CP-6, CP-7, CP-9, CP-10)",
+      "description": "Alternate storage/processing sites, system backup, and recovery.",
+      "infra_signals": ["automated backups with defined retention", "multi-AZ deployment; alternate region for Moderate+", "tested restore / failover runbooks"]
+    },
+    {
+      "id": "IA",
+      "name": "Identification and Authentication (IA-2, IA-5)",
+      "description": "Multifactor authentication and authenticator management for organizational users.",
+      "infra_signals": ["phishing-resistant MFA enforced", "federated identity (no local users)", "secrets in a managed vault with rotation"]
+    },
+    {
+      "id": "SC",
+      "name": "System and Communications Protection (SC-7, SC-8, SC-13, SC-28)",
+      "description": "Boundary protection, transmission confidentiality, FIPS-validated cryptography, and protection of data at rest.",
+      "infra_signals": ["boundary firewall/WAF with deny-by-default", "TLS with FIPS 140-validated modules (FIPS endpoints)", "encryption at rest with KMS/CMK everywhere", "no direct public access to internal components"]
+    },
+    {
+      "id": "SI",
+      "name": "System and Information Integrity (SI-2, SI-3, SI-4)",
+      "description": "Flaw remediation, malicious code protection, and system monitoring.",
+      "infra_signals": ["patch automation with SLAs", "threat detection enabled", "vulnerability scanning (authenticated) on a schedule"]
+    },
+    {
+      "id": "RA",
+      "name": "Risk Assessment (RA-5)",
+      "description": "Vulnerability monitoring and scanning.",
+      "infra_signals": ["continuous vulnerability scanning of instances, containers, and IaC", "findings routed to a tracked queue"]
+    },
+    {
+      "id": "IR",
+      "name": "Incident Response (IR-4, IR-6)",
+      "description": "Incident handling and reporting.",
+      "infra_signals": ["alerting wired to an incident channel", "US-CERT-compatible reporting path (organizational)", "forensic log access preserved"]
+    },
+    {
+      "id": "SA",
+      "name": "System and Services Acquisition (SA-11, SA-22)",
+      "description": "Developer security testing and unsupported component replacement.",
+      "infra_signals": ["security testing in CI", "no end-of-life runtimes or unsupported OS images in the stack"]
+    }
+  ]
+}

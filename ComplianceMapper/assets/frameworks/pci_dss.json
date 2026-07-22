@@ -1,0 +1,80 @@
+{
+  "framework": "pci_dss",
+  "name": "PCI DSS (Payment Card Industry Data Security Standard)",
+  "version": "v4.0.1",
+  "notes": "The twelve PCI DSS requirements, scoped to what an IaC stack can evidence for the cardholder data environment (CDE). Scoping/segmentation of the CDE drives everything. Not a substitute for a QSA assessment.",
+  "requirements": [
+    {
+      "id": "1",
+      "name": "Network security controls",
+      "description": "Install and maintain network security controls between trusted and untrusted networks and around the CDE.",
+      "infra_signals": ["dedicated VPC/VNet or subnets for the CDE", "security groups / NSGs default-deny", "no direct internet route to CDE data stores", "documented segmentation from non-CDE workloads"]
+    },
+    {
+      "id": "2",
+      "name": "Secure configurations",
+      "description": "Apply secure configurations to all system components; no vendor defaults.",
+      "infra_signals": ["hardened AMIs/images", "no default passwords or accounts in IaC", "unused services and ports disabled", "config baseline enforcement (Config rules, Azure Policy)"]
+    },
+    {
+      "id": "3",
+      "name": "Protect stored account data",
+      "description": "Protect stored account data; render PAN unreadable anywhere it is stored.",
+      "infra_signals": ["encryption at rest with customer-managed keys on CDE stores", "key rotation enabled", "tokenization service or field-level encryption", "no PAN in logs or object storage without controls"]
+    },
+    {
+      "id": "4",
+      "name": "Protect data in transit",
+      "description": "Protect cardholder data with strong cryptography during transmission over open, public networks.",
+      "infra_signals": ["TLS 1.2+ enforced on all public endpoints", "strong cipher policies on load balancers", "certificates managed and auto-renewed"]
+    },
+    {
+      "id": "5",
+      "name": "Malware protection",
+      "description": "Protect all systems and networks from malicious software.",
+      "infra_signals": ["endpoint/workload protection on VMs (Defender, GuardDuty runtime, etc.)", "container image scanning in the pipeline"]
+    },
+    {
+      "id": "6",
+      "name": "Secure systems and software",
+      "description": "Develop and maintain secure systems and software; manage vulnerabilities and changes.",
+      "infra_signals": ["patch automation (SSM Patch Manager, Update Manager)", "CI/CD with review gates", "WAF protecting public web apps", "dependency and IaC scanning in the pipeline"]
+    },
+    {
+      "id": "7",
+      "name": "Restrict access by need to know",
+      "description": "Restrict access to system components and cardholder data by business need to know.",
+      "infra_signals": ["least-privilege IAM roles scoped to CDE resources", "separate roles per duty (deploy vs operate vs audit)"]
+    },
+    {
+      "id": "8",
+      "name": "Identify users and authenticate access",
+      "description": "Identify users and authenticate access to system components; MFA for all access into the CDE.",
+      "infra_signals": ["MFA enforced for console and CDE access", "unique identities, no shared accounts", "no long-lived static credentials"]
+    },
+    {
+      "id": "9",
+      "name": "Restrict physical access",
+      "description": "Restrict physical access to cardholder data.",
+      "infra_signals": ["inherited from the cloud provider's attestations (AOC) for provider-managed facilities"]
+    },
+    {
+      "id": "10",
+      "name": "Log and monitor all access",
+      "description": "Log and monitor all access to system components and cardholder data.",
+      "infra_signals": ["audit trail enabled on all CDE accounts", "log integrity protection (locked buckets, immutability)", "log retention >= 12 months (3 months hot)", "time sync (NTP) consistent across components"]
+    },
+    {
+      "id": "11",
+      "name": "Test security regularly",
+      "description": "Test security of systems and networks regularly.",
+      "infra_signals": ["vulnerability scanning enabled", "IaC drift detection", "intrusion detection (GuardDuty, Defender, IDS) on CDE networks"]
+    },
+    {
+      "id": "12",
+      "name": "Security policies and programs",
+      "description": "Support information security with organizational policies and programs.",
+      "infra_signals": ["mostly organizational; IaC evidences it via tagging standards, ownership metadata, and documented environments"]
+    }
+  ]
+}

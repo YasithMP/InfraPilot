@@ -19,6 +19,7 @@ dotenv.load_dotenv()
 MODEL = os.getenv("INFRAPILOT_MODEL", "gemini-3.1-pro-preview")
 
 DIAGRAM_AGENT_URL = os.getenv("DIAGRAM_AGENT_URL", "http://localhost:8001")
+COMPLIANCE_AGENT_URL = os.getenv("COMPLIANCE_AGENT_URL", "http://localhost:8002")
 
 request_architecture_diagram = AgentTool(
     RemoteA2aAgent(
@@ -30,6 +31,21 @@ request_architecture_diagram = AgentTool(
             "gave one) the target directory to save the file to."
         ),
         agent_card=f"{DIAGRAM_AGENT_URL}/.well-known/agent-card.json",
+    )
+)
+
+request_compliance_mapping = AgentTool(
+    RemoteA2aAgent(
+        name="compliance_mapper",
+        description=(
+            "Specialist agent that maps a generated infrastructure stack's "
+            "controls against SOC 2, HIPAA, PCI DSS, or FedRAMP requirements "
+            "and reports the gaps. Call with the target framework, the "
+            "stack's resource summary (services, settings, network layout), "
+            "and (if the user gave one) the target directory to save the "
+            "report to."
+        ),
+        agent_card=f"{COMPLIANCE_AGENT_URL}/.well-known/agent-card.json",
     )
 )
 
@@ -490,6 +506,16 @@ Architecture diagrams:
 - If the specialist is unreachable, tell the user to start it with:
   python -m InfraDiagrammer
 
+Compliance mapping:
+- When the user asks how a stack measures up against SOC 2, HIPAA, PCI DSS,
+  or FedRAMP, call request_compliance_mapping with the framework and a
+  precise resource summary of the stack: services, security-relevant
+  settings (encryption, logging, IAM, network layout), and the target
+  directory if the user gave one.
+- Relay the specialist's gap report as-is; do not soften its findings.
+- If the specialist is unreachable, tell the user to start it with:
+  python -m ComplianceMapper
+
 Core rules:
 - Reuse modules/components and keep the result minimal.
 - Pin tool and provider versions. Do not invent unsupported version claims.
@@ -516,5 +542,6 @@ briefly. Do not include speculative resources that the user did not request.
         scaffold_iac_template,
         scaffold_cicd_template,
         request_architecture_diagram,
+        request_compliance_mapping,
     ],
 )

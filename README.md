@@ -13,6 +13,7 @@ InfraPilot is a [Google Agent Development Kit (ADK)](https://google.github.io/ad
 - GitHub Actions, Azure DevOps, and Jenkins pipeline guidance
 - Enterprise security, governance, and migration knowledge
 - Architecture diagram generation as validated `.drawio` files with official AWS/Azure/GCP icons, delegated to a separate `InfraDiagrammer` specialist agent over A2A
+- Compliance gap analysis against SOC 2, HIPAA, PCI DSS, and FedRAMP, delegated to a separate `ComplianceMapper` specialist agent over A2A
 
 ## Project structure
 
