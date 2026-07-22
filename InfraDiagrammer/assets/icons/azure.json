@@ -1,0 +1,30 @@
+{
+ "provider": "azure",
+ "icon_template": "image;aspect=fixed;html=1;points=[];align=center;fontSize=12;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/{ref};",
+ "notes": "Use official Azure service names. Icons reference draw.io's bundled azure2 library by path (image=img/lib/azure2/<category>/<Name>.svg) - reference icons by alias only. container_app uses the official Container App Environments icon (no plainer Container Apps icon exists in this draw.io version); both VM modules share the Virtual Machine icon. Groups are dashed Azure-blue containers: group:azure:resource_group / virtual_network / subnet; children of a container use parent=<container id> and coordinates relative to the container.",
+ "icons": [
+  {"key": "resource_group", "name": "Resource Group", "category": "general", "kind": "icon", "alias": "icon:azure:resource_group", "ref": "general/Resource_Groups.svg", "width": 60, "height": 60},
+  {"key": "virtual_network", "name": "Virtual Network", "category": "networking", "kind": "icon", "alias": "icon:azure:virtual_network", "ref": "networking/Virtual_Networks.svg", "width": 60, "height": 60},
+  {"key": "network_security_group", "name": "Network Security Group", "category": "networking", "kind": "icon", "alias": "icon:azure:network_security_group", "ref": "networking/Network_Security_Groups.svg", "width": 60, "height": 60},
+  {"key": "app_service", "name": "App Service", "category": "web", "kind": "icon", "alias": "icon:azure:app_service", "ref": "app_services/App_Services.svg", "width": 60, "height": 60},
+  {"key": "container_app", "name": "Container App", "category": "containers", "kind": "icon", "alias": "icon:azure:container_app", "ref": "other/Container_App_Environments.svg", "width": 60, "height": 60},
+  {"key": "key_vault", "name": "Key Vault", "category": "security", "kind": "icon", "alias": "icon:azure:key_vault", "ref": "security/Key_Vaults.svg", "width": 60, "height": 60},
+  {"key": "storage_account", "name": "Storage Account", "category": "storage", "kind": "icon", "alias": "icon:azure:storage_account", "ref": "storage/Storage_Accounts.svg", "width": 60, "height": 60},
+  {"key": "user_assigned_identity", "name": "Managed Identity", "category": "identity", "kind": "icon", "alias": "icon:azure:user_assigned_identity", "ref": "identity/Managed_Identities.svg", "width": 60, "height": 60},
+  {"key": "linux_virtual_machine", "name": "Linux Virtual Machine", "category": "compute", "kind": "icon", "alias": "icon:azure:linux_virtual_machine", "ref": "compute/Virtual_Machine.svg", "width": 60, "height": 60},
+  {"key": "windows_virtual_machine", "name": "Windows Virtual Machine", "category": "compute", "kind": "icon", "alias": "icon:azure:windows_virtual_machine", "ref": "compute/Virtual_Machine.svg", "width": 60, "height": 60},
+  {"key": "postgresql_flexible_server", "name": "PostgreSQL Flexible Server", "category": "database", "kind": "icon", "alias": "icon:azure:postgresql_flexible_server", "ref": "databases/Azure_Database_PostgreSQL_Server.svg", "width": 60, "height": 60},
+  {"key": "function_app", "name": "Function App", "category": "compute", "kind": "icon", "alias": "icon:azure:function_app", "ref": "compute/Function_Apps.svg", "width": 60, "height": 60},
+  {"key": "container_registry", "name": "Container Registry", "category": "containers", "kind": "icon", "alias": "icon:azure:container_registry", "ref": "containers/Container_Registries.svg", "width": 60, "height": 60},
+  {"key": "application_gateway", "name": "Application Gateway", "category": "networking", "kind": "icon", "alias": "icon:azure:application_gateway", "ref": "networking/Application_Gateways.svg", "width": 60, "height": 60},
+  {"key": "load_balancer", "name": "Load Balancer", "category": "networking", "kind": "icon", "alias": "icon:azure:load_balancer", "ref": "networking/Load_Balancers.svg", "width": 60, "height": 60},
+  {"key": "dns", "name": "DNS Zone", "category": "networking", "kind": "icon", "alias": "icon:azure:dns", "ref": "networking/DNS_Zones.svg", "width": 60, "height": 60},
+  {"key": "cdn", "name": "CDN Profile", "category": "networking", "kind": "icon", "alias": "icon:azure:cdn", "ref": "app_services/CDN_Profiles.svg", "width": 60, "height": 60},
+  {"key": "monitor", "name": "Azure Monitor", "category": "management", "kind": "icon", "alias": "icon:azure:monitor", "ref": "management_governance/Monitor.svg", "width": 60, "height": 60}
+ ],
+ "groups": [
+  {"key": "resource_group", "name": "Resource Group", "category": "container", "kind": "group", "alias": "group:azure:resource_group", "style": "rounded=1;dashed=1;dashPattern=8 8;fillColor=none;whiteSpace=wrap;html=1;strokeColor=#0078D4;fontColor=#0078D4;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;container=1;pointerEvents=0;", "width": 400, "height": 300},
+  {"key": "virtual_network", "name": "Virtual Network", "category": "container", "kind": "group", "alias": "group:azure:virtual_network", "style": "rounded=1;dashed=1;dashPattern=8 8;fillColor=none;whiteSpace=wrap;html=1;strokeColor=#0078D4;fontColor=#0078D4;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;container=1;pointerEvents=0;", "width": 400, "height": 300},
+  {"key": "subnet", "name": "Subnet", "category": "container", "kind": "group", "alias": "group:azure:subnet", "style": "rounded=1;dashed=1;dashPattern=8 8;fillColor=none;whiteSpace=wrap;html=1;strokeColor=#0078D4;fontColor=#0078D4;verticalAlign=top;align=left;spacingLeft=8;fontStyle=1;container=1;pointerEvents=0;", "width": 400, "height": 300}
+ ]
+}
