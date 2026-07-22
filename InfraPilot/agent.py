@@ -5,6 +5,8 @@ from typing import Literal
 
 import dotenv
 from google.adk.agents import Agent
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+from google.adk.tools.agent_tool import AgentTool
 
 from .template_tools import (
     list_template_files,
@@ -15,6 +17,21 @@ from .template_tools import (
 dotenv.load_dotenv()
 
 MODEL = os.getenv("INFRAPILOT_MODEL", "gemini-3.1-pro-preview")
+
+DIAGRAM_AGENT_URL = os.getenv("DIAGRAM_AGENT_URL", "http://localhost:8001")
+
+request_architecture_diagram = AgentTool(
+    RemoteA2aAgent(
+        name="infra_diagrammer",
+        description=(
+            "Specialist agent that authors validated draw.io (.drawio) cloud "
+            "architecture diagrams using official AWS/Azure/GCP icon styles. "
+            "Call with the provider, services, relationships, and (if the user "
+            "gave one) the target directory to save the file to."
+        ),
+        agent_card=f"{DIAGRAM_AGENT_URL}/.well-known/agent-card.json",
+    )
+)
 
 Provider = Literal["aws", "azure", "gcp"]
 Tool = Literal["terraform", "opentofu", "pulumi", "bicep"]
@@ -462,6 +479,17 @@ Workflow:
 8. Report the intended file tree, generated files, validation commands, and every
    placeholder the user must fill before plan/apply.
 
+Architecture diagrams:
+- When the user asks for an architecture or deployment diagram, gather the
+  provider and service context first (recommend_stack if unclear), then call
+  request_architecture_diagram with a precise description: provider,
+  services, relationships, and the target directory if the user gave one.
+- Relay the specialist's reply as-is: a diagrams.net URL that opens the
+  diagram directly in the browser, or the saved .drawio file path if the
+  user gave a target directory.
+- If the specialist is unreachable, tell the user to start it with:
+  python -m InfraDiagrammer
+
 Core rules:
 - Reuse modules/components and keep the result minimal.
 - Pin tool and provider versions. Do not invent unsupported version claims.
@@ -487,5 +515,6 @@ briefly. Do not include speculative resources that the user did not request.
         list_template_files,
         scaffold_iac_template,
         scaffold_cicd_template,
+        request_architecture_diagram,
     ],
 )
