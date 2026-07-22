@@ -1,0 +1,74 @@
+{
+  "framework": "soc2",
+  "name": "SOC 2 (AICPA Trust Services Criteria)",
+  "version": "2017 TSC with 2022 points of focus",
+  "notes": "Infrastructure-relevant subset of the Trust Services Criteria (Security, Availability, Confidentiality). Not a substitute for the full TSC or an auditor.",
+  "requirements": [
+    {
+      "id": "CC6.1",
+      "name": "Logical access security",
+      "description": "Logical access security software, infrastructure, and architectures restrict access to protected information assets.",
+      "infra_signals": ["IAM roles with least privilege", "security groups / NSGs restricting ingress", "no wildcard (*) IAM policies", "private subnets for data stores", "encryption at rest (KMS/CMK)"]
+    },
+    {
+      "id": "CC6.2",
+      "name": "User provisioning and deprovisioning",
+      "description": "New internal and external users are registered and authorized prior to access; access is removed when no longer required.",
+      "infra_signals": ["IAM managed via IaC (no console users)", "SSO/identity federation (IAM Identity Center, Entra ID, Cloud Identity)", "no long-lived access keys"]
+    },
+    {
+      "id": "CC6.6",
+      "name": "External access boundaries",
+      "description": "Logical access security measures protect against threats from sources outside the system boundary.",
+      "infra_signals": ["WAF in front of public endpoints", "no 0.0.0.0/0 on SSH/RDP", "VPN or private endpoints for admin access", "DDoS protection (Shield, Front Door, Cloud Armor)"]
+    },
+    {
+      "id": "CC6.7",
+      "name": "Data in transit and removable media",
+      "description": "Transmission, movement, and removal of information is restricted and protected during transmission.",
+      "infra_signals": ["TLS enforced on load balancers and endpoints", "HTTPS-only storage policies", "minimum TLS version pinned"]
+    },
+    {
+      "id": "CC7.1",
+      "name": "Vulnerability and configuration monitoring",
+      "description": "Detection and monitoring procedures identify configuration changes and newly discovered vulnerabilities.",
+      "infra_signals": ["Config/Policy service enabled (AWS Config, Azure Policy, Security Command Center)", "container/image scanning", "drift detection in CI"]
+    },
+    {
+      "id": "CC7.2",
+      "name": "Anomaly monitoring",
+      "description": "System components are monitored for anomalies indicative of malicious acts, natural disasters, and errors.",
+      "infra_signals": ["centralized logging (CloudTrail, Activity Log, Cloud Audit Logs)", "threat detection (GuardDuty, Defender, SCC)", "alerting rules and notification channels"]
+    },
+    {
+      "id": "CC7.3",
+      "name": "Incident evaluation",
+      "description": "Security events are evaluated to determine whether they could or have resulted in a failure to meet objectives, and are classified.",
+      "infra_signals": ["log retention configured", "immutable/append-only audit logs", "alert routing to on-call"]
+    },
+    {
+      "id": "CC8.1",
+      "name": "Change management",
+      "description": "Changes to infrastructure, data, software, and procedures are authorized, designed, developed, tested, approved, and implemented.",
+      "infra_signals": ["IaC in version control", "CI/CD pipeline with review gates", "separate plan/apply stages", "protected main branch"]
+    },
+    {
+      "id": "A1.1",
+      "name": "Capacity management",
+      "description": "Current processing capacity and usage are monitored to enable implementation of additional capacity.",
+      "infra_signals": ["autoscaling groups / scale sets", "capacity alarms", "quota monitoring"]
+    },
+    {
+      "id": "A1.2",
+      "name": "Recovery infrastructure",
+      "description": "Environmental protections, backup processes, and recovery infrastructure are authorized, designed, developed, and implemented.",
+      "infra_signals": ["automated backups with retention", "multi-AZ / zone-redundant deployment", "cross-region replication for critical data", "restore procedure documented or tested"]
+    },
+    {
+      "id": "C1.1",
+      "name": "Confidential information identification",
+      "description": "Confidential information is identified and maintained to meet the entity's confidentiality objectives.",
+      "infra_signals": ["resource tagging for data classification", "separate storage for confidential data", "bucket/container public-access blocks"]
+    }
+  ]
+}

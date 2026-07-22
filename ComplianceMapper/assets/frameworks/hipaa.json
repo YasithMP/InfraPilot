@@ -1,0 +1,68 @@
+{
+  "framework": "hipaa",
+  "name": "HIPAA Security Rule (45 CFR Part 164, Subpart C)",
+  "version": "Security Rule technical and administrative safeguards",
+  "notes": "Infrastructure-relevant subset of the Security Rule safeguards for systems handling ePHI. Physical safeguards for cloud data centers are typically inherited from the cloud provider under a BAA. Not legal advice.",
+  "requirements": [
+    {
+      "id": "164.312(a)(1)",
+      "name": "Access control",
+      "description": "Technical policies and procedures that allow access to ePHI only to authorized persons or software programs.",
+      "infra_signals": ["IAM least privilege on ePHI stores", "unique IAM identities (no shared accounts)", "private subnets and endpoint policies for data services"]
+    },
+    {
+      "id": "164.312(a)(2)(iv)",
+      "name": "Encryption and decryption (addressable)",
+      "description": "Mechanism to encrypt and decrypt ePHI at rest.",
+      "infra_signals": ["encryption at rest with customer-managed keys", "encrypted EBS/managed disks", "encrypted database storage and snapshots"]
+    },
+    {
+      "id": "164.312(b)",
+      "name": "Audit controls",
+      "description": "Hardware, software, and procedural mechanisms that record and examine activity in systems containing ePHI.",
+      "infra_signals": ["CloudTrail / Activity Log / Audit Logs enabled on all accounts", "data-access logging on ePHI stores", "log retention >= 6 years for policy artifacts"]
+    },
+    {
+      "id": "164.312(c)(1)",
+      "name": "Integrity",
+      "description": "Policies and procedures to protect ePHI from improper alteration or destruction.",
+      "infra_signals": ["object versioning / soft delete on ePHI storage", "deletion protection on databases", "immutable backups or vault lock"]
+    },
+    {
+      "id": "164.312(d)",
+      "name": "Person or entity authentication",
+      "description": "Procedures to verify that a person or entity seeking access to ePHI is the one claimed.",
+      "infra_signals": ["MFA enforced", "identity federation / SSO", "no static credentials in code or pipelines"]
+    },
+    {
+      "id": "164.312(e)(1)",
+      "name": "Transmission security",
+      "description": "Technical security measures to guard against unauthorized access to ePHI transmitted over a network.",
+      "infra_signals": ["TLS enforced end to end", "VPN or private peering for backend traffic", "HTTPS-only policies on storage and APIs"]
+    },
+    {
+      "id": "164.308(a)(1)(ii)(A)",
+      "name": "Risk analysis",
+      "description": "Accurate and thorough assessment of potential risks and vulnerabilities to ePHI.",
+      "infra_signals": ["vulnerability scanning enabled", "security posture service (Security Hub, Defender for Cloud, SCC)"]
+    },
+    {
+      "id": "164.308(a)(7)",
+      "name": "Contingency plan",
+      "description": "Policies for responding to an emergency that damages systems containing ePHI (backup, disaster recovery, emergency mode).",
+      "infra_signals": ["automated backups with tested restore", "multi-AZ or multi-region failover for critical ePHI systems", "documented RTO/RPO"]
+    },
+    {
+      "id": "164.308(a)(4)",
+      "name": "Information access management",
+      "description": "Policies for authorizing access to ePHI consistent with the minimum necessary standard.",
+      "infra_signals": ["role-based access separated by environment", "separate prod/non-prod accounts or subscriptions", "no ePHI in non-prod"]
+    },
+    {
+      "id": "164.314(a)",
+      "name": "Business associate contracts",
+      "description": "Contracts with business associates (including cloud providers) that safeguard ePHI.",
+      "infra_signals": ["cloud provider BAA in place (organizational; only HIPAA-eligible services used in the stack)"]
+    }
+  ]
+}
