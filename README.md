@@ -12,8 +12,9 @@ InfraPilot is a [Google Agent Development Kit (ADK)](https://google.github.io/ad
 - Environment isolation, state, secrets, naming, and layout guidance
 - GitHub Actions, Azure DevOps, and Jenkins pipeline guidance
 - Enterprise security, governance, and migration knowledge
-- Architecture diagram generation as validated `.drawio` files with official AWS/Azure/GCP icons, delegated to a separate `InfraDiagrammer` specialist agent over A2A
-- Compliance gap analysis against SOC 2, HIPAA, PCI DSS, and FedRAMP, delegated to a separate `ComplianceMapper` specialist agent over A2A
+- Architecture diagram generation as validated `.drawio` files with official AWS/Azure/GCP icons, via an in-process `InfraDiagrammer` specialist agent
+- Compliance gap analysis against SOC 2, HIPAA, PCI DSS, and FedRAMP, via an in-process `ComplianceMapper` specialist agent
+- Installable as a single `infrapilot` CLI command (`pip install -e .`) — no separate servers to run
 
 ## Project structure
 
@@ -22,6 +23,7 @@ InfraPilot is a [Google Agent Development Kit (ADK)](https://google.github.io/ad
 ├── InfraPilot/
 │   ├── __init__.py
 │   ├── agent.py
+│   ├── config.py
 │   ├── template_tools.py
 │   ├── assets/
 │   │   ├── GENOPS_LICENSE
@@ -31,97 +33,68 @@ InfraPilot is a [Google Agent Development Kit (ADK)](https://google.github.io/ad
 ├── InfraDiagrammer/
 │   ├── __init__.py
 │   ├── agent.py
-│   ├── __main__.py
 │   ├── diagram_tools.py
 │   └── assets/
 │       └── icons/
+├── ComplianceMapper/
+│   ├── __init__.py
+│   ├── agent.py
+│   ├── compliance_tools.py
+│   └── assets/
+│       └── frameworks/
+├── cli.py
+├── tui.py
+├── pyproject.toml
 ├── .gitignore
 ├── README.md
 └── requirements.txt
 ```
 
-Local credentials, virtual environments, Python caches, and ADK session data are excluded from Git.
+Credentials live in `~/.infrapilot/.env` (per-user, outside the repo), not
+inside any of these folders. Virtual environments, Python caches, and ADK
+session data are excluded from Git.
 
 ## Prerequisites
 
 - Python 3.10 or newer
-- A Google AI Studio API key or a configured Google Cloud project
+- A Google AI Studio API key ([get one here](https://aistudio.google.com/apikey)) or a configured Google Cloud project
 
-## Setup
+## Install
 
-1. Clone the repository and enter its directory.
+```bash
+git clone <your-repository-url>
+cd InfraPilot
+python -m venv .venv
+.venv/Scripts/activate   # macOS/Linux: source .venv/bin/activate
+pip install -e .
+```
 
-   ```bash
-   git clone <your-repository-url>
-   cd devops-agent
-   ```
+That installs the `infrapilot` command into your virtual environment's `PATH`
+via `pyproject.toml`'s `[project.scripts]` entry point.
 
-2. Create and activate a virtual environment.
+## Run it
 
-   macOS/Linux:
+```bash
+infrapilot
+```
 
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
+Opens a full-screen [Textual](https://textual.textualize.io/) app: a scrolling
+conversation pane, a pinned multi-line input bar (Enter to send, Shift+Enter
+for a newline), a live status line while the model is working, and a footer
+with model/token usage — the same shape as Claude Code, Codex CLI, and Copilot
+CLI. Set up credentials first — copy `InfraPilot/.env.example` to
+`~/.infrapilot/.env` and fill it in, or export `GOOGLE_API_KEY`/Vertex AI
+settings in your shell.
 
-   Windows PowerShell:
+Pass a one-off request instead of chatting: `infrapilot "list supported stacks"`.
+One-shot mode stays plain-console output (no full-screen app) so it's still
+pipeable/scriptable.
 
-   ```powershell
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   ```
+`InfraDiagrammer` and `ComplianceMapper` run in-process as ordinary tool calls —
+one command, one process, nothing else to start.
 
-3. Install the dependencies.
-
-   ```bash
-   python -m pip install -r requirements.txt
-   ```
-
-4. Create your local environment file.
-
-   macOS/Linux:
-
-   ```bash
-   cp InfraPilot/.env.example InfraPilot/.env
-   ```
-
-   Windows PowerShell:
-
-   ```powershell
-   Copy-Item InfraPilot\.env.example InfraPilot\.env
-   ```
-
-5. Edit `InfraPilot/.env` and provide either your Google AI Studio API key or your Vertex AI project settings. Never commit this file.
-
-## Run the agents
-
-InfraPilot delegates architecture-diagram requests to a separate `InfraDiagrammer`
-specialist agent over the A2A protocol, so two processes run in development.
-
-`make run` starts both with one command: the specialist in the background,
-then `adk web` in the foreground, stopping the specialist when `adk web` exits.
-`make install` creates `.venv` and installs `requirements.txt` first if needed.
-
-To run them by hand instead:
-
-1. Start the diagram specialist (defaults to `localhost:8001`):
-
-   ```bash
-   python -m InfraDiagrammer
-   ```
-
-2. In another terminal, with the virtual environment active, start the orchestrator:
-
-   ```bash
-   adk web
-   ```
-
-Open the local URL printed by ADK and select `InfraPilot`. If `InfraDiagrammer`
-isn't running, every other capability still works — only diagram requests fail,
-with a message telling you to start it. `DIAGRAM_AGENT_URL` (on the InfraPilot
-side) and `DIAGRAM_AGENT_HOST`/`DIAGRAM_AGENT_PORT` (on the InfraDiagrammer
-side) override the defaults for a non-local deployment.
+Prefer ADK's own dev tooling? `make cli` (`adk run InfraPilot`) and `make web`
+(`adk web`, browser UI) both work directly against the same agent.
 
 ## Example prompts
 
@@ -146,7 +119,7 @@ side) override the defaults for a non-local deployment.
 - `list_template_files` discovers bundled assets without loading their contents.
 - `scaffold_iac_template` copies a selected IaC stack to an explicit user-supplied target.
 - `scaffold_cicd_template` copies matching pipeline files to an explicit user-supplied target.
-- `request_architecture_diagram` (an `AgentTool` wrapping ADK's `RemoteA2aAgent`) delegates diagram requests to `InfraDiagrammer` over A2A and relays its reply.
+- `request_architecture_diagram` / `request_compliance_mapping` (`AgentTool`s wrapping the specialists' `root_agent`s directly, in-process) delegate to `InfraDiagrammer`/`ComplianceMapper` and relay their reply.
 
 The agent uses these tools as grounded knowledge and copies version-pinned assets instead of spending model tokens regenerating known modules. It writes only to a target directory explicitly supplied by the user. Without one, it returns the proposed files in chat. Existing destination files are skipped unless overwrite is explicitly requested.
 
@@ -157,7 +130,7 @@ The agent uses these tools as grounded knowledge and copies version-pinned asset
 - `validate_drawio_xml` expands icon aliases and lints the diagram structure.
 - `save_drawio_diagram` writes a validated `.drawio` file to an explicit user-supplied target.
 
-The LLM never transcribes raw icon styles: it authors XML with short `icon:<provider>:<key>` / `group:<provider>:<key>` alias tokens, which the tools expand deterministically. `InfraDiagrammer/__main__.py` serves the agent over A2A (`python -m InfraDiagrammer`) using ADK's `to_a2a()` under uvicorn.
+The LLM never transcribes raw icon styles: it authors XML with short `icon:<provider>:<key>` / `group:<provider>:<key>` alias tokens, which the tools expand deterministically.
 
 ## Extension ideas
 

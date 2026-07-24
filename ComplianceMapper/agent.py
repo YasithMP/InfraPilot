@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import dotenv
 from google.adk.agents import Agent
+
+from InfraPilot.config import CONFIG_ENV_FILE
 
 from .compliance_tools import (
     get_framework_requirements,
@@ -13,10 +14,7 @@ from .compliance_tools import (
     save_gap_report,
 )
 
-# dotenv.load_dotenv() walks up from this file's own directory, which never
-# reaches InfraPilot/.env (a sibling package) — point it there explicitly so
-# all agents share one credentials file.
-dotenv.load_dotenv(Path(__file__).resolve().parent.parent / "InfraPilot" / ".env")
+dotenv.load_dotenv(CONFIG_ENV_FILE)
 
 MODEL = os.getenv("INFRAPILOT_MODEL", "gemini-3.1-pro-preview")
 

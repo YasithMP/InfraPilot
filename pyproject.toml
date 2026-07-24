@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "infrapilot"
+version = "0.1.0"
+description = "Cursor for infra: an agentic CLI that designs and scaffolds Terraform, OpenTofu, Pulumi, and Bicep."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-adk",
+    "google-cloud-aiplatform[adk,agent_engines]",
+    "google-genai",
+    "google-api-python-client",
+    "google-cloud-storage",
+    "a2a-sdk",
+    "sse-starlette",
+    "uvicorn",
+    "python-dotenv",
+    "rich",
+    "textual",
+]
+
+[project.scripts]
+infrapilot = "cli:main"
+
+[tool.setuptools]
+py-modules = ["cli", "tui"]
+packages = ["InfraPilot", "InfraDiagrammer", "ComplianceMapper"]
+
+[tool.setuptools.package-data]
+InfraPilot = ["assets/**/*", "assets/GENOPS_LICENSE", "knowledge/*.md"]
+InfraDiagrammer = ["assets/icons/**/*"]
+ComplianceMapper = ["assets/frameworks/**/*"]
