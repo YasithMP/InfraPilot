@@ -7,3 +7,5 @@ a2a-sdk
 sse-starlette
 uvicorn
 python-dotenv
+rich
+textual

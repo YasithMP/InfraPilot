@@ -5,49 +5,26 @@ from typing import Literal
 
 import dotenv
 from google.adk.agents import Agent
-from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
 from google.adk.tools.agent_tool import AgentTool
 
+from ComplianceMapper.agent import root_agent as _compliance_agent
+from InfraDiagrammer.agent import root_agent as _diagrammer_agent
+
+from .config import CONFIG_ENV_FILE
 from .template_tools import (
     list_template_files,
     scaffold_cicd_template,
     scaffold_iac_template,
 )
 
-dotenv.load_dotenv()
+dotenv.load_dotenv(CONFIG_ENV_FILE)
 
 MODEL = os.getenv("INFRAPILOT_MODEL", "gemini-3.1-pro-preview")
 
-DIAGRAM_AGENT_URL = os.getenv("DIAGRAM_AGENT_URL", "http://localhost:8001")
-COMPLIANCE_AGENT_URL = os.getenv("COMPLIANCE_AGENT_URL", "http://localhost:8002")
-
-request_architecture_diagram = AgentTool(
-    RemoteA2aAgent(
-        name="infra_diagrammer",
-        description=(
-            "Specialist agent that authors validated draw.io (.drawio) cloud "
-            "architecture diagrams using official AWS/Azure/GCP icon styles. "
-            "Call with the provider, services, relationships, and (if the user "
-            "gave one) the target directory to save the file to."
-        ),
-        agent_card=f"{DIAGRAM_AGENT_URL}/.well-known/agent-card.json",
-    )
-)
-
-request_compliance_mapping = AgentTool(
-    RemoteA2aAgent(
-        name="compliance_mapper",
-        description=(
-            "Specialist agent that maps a generated infrastructure stack's "
-            "controls against SOC 2, HIPAA, PCI DSS, or FedRAMP requirements "
-            "and reports the gaps. Call with the target framework, the "
-            "stack's resource summary (services, settings, network layout), "
-            "and (if the user gave one) the target directory to save the "
-            "report to."
-        ),
-        agent_card=f"{COMPLIANCE_AGENT_URL}/.well-known/agent-card.json",
-    )
-)
+# Specialists run in-process as ordinary AgentTools, not over A2A/HTTP: a
+# single-user CLI has no need for the network hop, so skip it.
+request_architecture_diagram = AgentTool(_diagrammer_agent)
+request_compliance_mapping = AgentTool(_compliance_agent)
 
 Provider = Literal["aws", "azure", "gcp"]
 Tool = Literal["terraform", "opentofu", "pulumi", "bicep"]
@@ -503,8 +480,6 @@ Architecture diagrams:
 - Relay the specialist's reply as-is: a diagrams.net URL that opens the
   diagram directly in the browser, or the saved .drawio file path if the
   user gave a target directory.
-- If the specialist is unreachable, tell the user to start it with:
-  python -m InfraDiagrammer
 
 Compliance mapping:
 - When the user asks how a stack measures up against SOC 2, HIPAA, PCI DSS,
@@ -513,8 +488,6 @@ Compliance mapping:
   settings (encryption, logging, IAM, network layout), and the target
   directory if the user gave one.
 - Relay the specialist's gap report as-is; do not soften its findings.
-- If the specialist is unreachable, tell the user to start it with:
-  python -m ComplianceMapper
 
 Core rules:
 - Reuse modules/components and keep the result minimal.

@@ -38,7 +38,6 @@ def test_infrapilot_delegates_via_request_architecture_diagram():
 def test_infrapilot_instruction_covers_delegation():
     instruction = pilot_agent.instruction
     assert "request_architecture_diagram" in instruction
-    assert "python -m InfraDiagrammer" in instruction
 
 
 COMPLIANCE_TOOLS = {
@@ -62,4 +61,3 @@ def test_infrapilot_delegates_via_request_compliance_mapping():
 def test_infrapilot_instruction_covers_compliance_delegation():
     instruction = pilot_agent.instruction
     assert "request_compliance_mapping" in instruction
-    assert "python -m ComplianceMapper" in instruction
